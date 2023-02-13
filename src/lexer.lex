@@ -37,6 +37,8 @@ return !multiline_comment_stack.empty();
 "let" { return TLET; }
 [0-9]+ { yylval.lexeme = std::string(yytext); return TINT_LIT; }
 
+"def" {return [a-zA-Z]+ [a-zA-Z0-9]+ {macros[std::string(yytext)] = std::string(yytext)};}
+"undef" {return [a-zA-Z]+ {macros.erase(std::string(yytext))};}
 
 [a-zA-Z]+ yylval.lexeme = std::string(yytext); return TIDENT;
 
@@ -45,7 +47,6 @@ return !multiline_comment_stack.empty();
 "//".* { /* skip */ }
 
 [/][][^*]*[*]+([^/*][^*]*[*]+)*[/] { /* skip */ }
-
 .|\n {return *yytext;}
 %%
 
