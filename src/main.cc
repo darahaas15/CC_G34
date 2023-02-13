@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -13,6 +14,14 @@ extern FILE *yyin;
 extern int yylex();
 extern char *yytext;
 
+extern FILE *fooin;
+extern FILE *fooout;
+extern int foolex();
+extern char *footext;
+
+extern std::string key;
+extern std::unordered_map<std::string, std::string> map;
+
 NodeStmts *final_values;
 
 #define ARG_OPTION_L 0
@@ -20,72 +29,6 @@ NodeStmts *final_values;
 #define ARG_OPTION_S 2
 #define ARG_OPTION_O 3
 #define ARG_FAIL -1
-
-/*void expand_macro(string &str)
-{
-	istringstream ss(str);
-	string line;
-	string expanded_line;
-	while (getline(ss, line))
-	{
-		if (!in_comment)
-		{
-			if (line.find("#def") == 0)
-			{
-				// handle macro definition
-				size_t first_space = line.find(" ");
-				size_t second_space = line.find(" ", first_space + 1);
-				if (second_space == string::npos)
-				{
-					// macro without a body
-					macros[line.substr(first_space + 1)] = "1";
-				}
-				else
-				{
-					string key = line.substr(first_space + 1, second_space - first_space - 1);
-					string value = line.substr(second_space + 1);
-					macros[key] = value;
-				}
-				in_macro = true;
-			}
-			else if (line.find("#undef") == 0)
-			{
-				// handle macro undefinition
-				size_t first_space = line.find(" ");
-				string key = line.substr(first_space + 1);
-				macros.erase(key);
-				in_macro = true;
-			}
-			else
-			{
-				// expand macros in line
-				expanded_line = line;
-				for (auto const &macro : macros)
-				{
-					size_t pos = 0;
-					while ((pos = expanded_line.find(macro.first, pos)) != string::npos)
-					{
-						expanded_line.replace(pos, macro.first.length(), macro.second);
-						pos += macro.second.length();
-					}
-				}
-				// handle comments
-				size_t comment_start = expanded_line.find("//");
-				if (comment_start != string::npos)
-				{
-					expanded_line = expanded_line.substr(0, comment_start);
-				}
-				size_t comment_start_multi = expanded_line.find("");
-				size_t comment_end_multi = expanded_line.find("");
-				if (comment_start_multi != string::npos && comment_end_multi == string::npos)
-				{
-					in_comment = true;
-					expanded_line = expanded_line.sub
-				}
-			}
-		}
-	}
-} */
 
 int parse_arguments(int argc, char *argv[])
 {
@@ -122,6 +65,89 @@ int parse_arguments(int argc, char *argv[])
 	return ARG_FAIL;
 }
 
+bool cycle_check(std::unordered_map<std::string, std::string> m)
+{
+	for (auto i : m)
+	{
+		std::string ptr = i.first;
+		while (m.find(ptr) != m.end())
+		{
+			ptr = m[ptr];
+			if (ptr == i.first)
+				return true;
+		}
+	}
+	return false;
+}
+
+void preprocess()
+{
+	// Actual Pre
+	int count;
+	int token;
+	std::string contents;
+
+	// Run preprocessor until no more macros can be expanded
+	// Preprocessor works on temp file
+	do
+	{
+		fooin = fopen("temp", "r");
+		count = 0;
+		token = 0;
+		contents = "";
+
+		// Run lexer on program (macro replacing and comment removal)
+		do
+		{
+			token = foolex();
+			std::string temp = footext;
+
+			// Check for cycles
+			if (token == 5 && cycle_check(map))
+			{
+				std::cerr << "Cycle detected in #def statements" << std::endl;
+				remove("temp");
+				fclose(fooin);
+				exit(1);
+			}
+
+			// Check if it matches macros "def" and "undef" which are defined in pre.lex
+			if (token == 3 && map.find(temp) != map.end())
+			{
+				count++;
+				temp = map[temp];
+			}
+			contents += temp;
+
+		} while (token != 0);
+
+		std::ofstream otemp("temp");
+		otemp << contents;
+		otemp.close();
+	} while (count > 0);
+
+	fooin = fopen("temp", "r");
+	contents = "";
+	do
+	{
+		token = foolex();
+		std::string temp = footext;
+		if (token != 1 && token != 2 && token != 5)
+			contents += temp;
+
+	} while (token != 0);
+
+	// Print final preprocessed code
+	std::cout << "PRE" << std::endl
+			  << contents << std::endl;
+
+	fclose(fooin);
+
+	std::ofstream ofile("temp");
+	ofile << contents;
+	ofile.close();
+}
+
 int main(int argc, char *argv[])
 {
 	int arg_option = parse_arguments(argc, argv);
@@ -130,17 +156,25 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	// Copy original file to temp for preprocessing
 	std::string file_name(argv[1]);
-	FILE *source = fopen(argv[1], "r");
 
-	if (!source)
+	std::ifstream itemp(file_name);
+	std::ofstream otemp("temp");
+	std::string line;
+	while (getline(itemp, line))
 	{
-		std::cerr << "File does not exists.\n";
-		exit(1);
+		otemp << line << std::endl;
 	}
+	itemp.close();
+	otemp.close();
 
-	yyin = source;
+	preprocess();
 
+	// Main Lexer and Parser
+	yyin = fopen("temp", "r");
+
+	// For debugging, prints tokens
 	if (arg_option == ARG_OPTION_L)
 	{
 		extern std::string token_to_string(int token, const char *lexeme);
@@ -160,9 +194,12 @@ int main(int argc, char *argv[])
 	}
 
 	final_values = nullptr;
+
+	// Lex and parse
 	yyparse();
 
 	fclose(yyin);
+	remove("temp");
 
 	if (final_values)
 	{
@@ -186,7 +223,7 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
-		std::cerr << "empty program";
+		std::cerr << "Empty program";
 	}
 
 	return 0;

@@ -3,13 +3,7 @@
 %{
 #include "parser.hh"
 #include <string>
-#include <unordered_map>
-    #include <cstring>
-    #include <tuple>
-    
-    std::unordered_map<std::string, std::string> m;
 
-    std::pair<std::string, std::string> tokenise(char* prrtext);
 extern int yyerror(std::string msg);
 %}
 
@@ -29,8 +23,7 @@ extern int yyerror(std::string msg);
 [a-zA-Z]+ { yylval.lexeme = std::string(yytext); return TIDENT; }
 [ \t\n]   { /* skip */ }
 .         { yyerror("unknown char"); }
-"//".*                                    { /* DO NOTHING */ }
-[/][*][^*]*[*]+([^*/][^*]*[*]+)*[/]       { /* DO NOTHING */ }
+.|\n {return *yytext;}
 %%
 
 std::string token_to_string(int token, const char *lexeme) {
@@ -53,18 +46,4 @@ std::string token_to_string(int token, const char *lexeme) {
     }
 
     return s;
-}
-
-std::pair<std::string, std::string> tokenise(char *prrtext) {
-    //Returns {key, val}
-    char* tok1, *tok2, *tok3;
-    tok1 = std::strtok(prrtext, " ");
-    tok2 = std::strtok(NULL, " ");
-    tok3 = tok2 + std::strlen(tok2) + 1;
-    std::string s2 = std::string(tok2);
-    std::string s3 = std::string(tok3);
-    for(char& c: s3) {
-        if(c=='\\') c = ' ';
-    }
-    return {s2, s3};
 }
