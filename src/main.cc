@@ -30,26 +30,33 @@ NodeStmts *final_values;
 #define ARG_OPTION_O 3
 #define ARG_FAIL -1
 
-int parse_arguments(int argc, char *argv[]) {
-	if (argc == 3 || argc == 4) {
-		if (strlen(argv[2]) == 2 && argv[2][0] == '-') {
-			if (argc == 3) {
-				switch (argv[2][1]) {
-					case 'l':
+int parse_arguments(int argc, char *argv[])
+{
+	if (argc == 3 || argc == 4)
+	{
+		if (strlen(argv[2]) == 2 && argv[2][0] == '-')
+		{
+			if (argc == 3)
+			{
+				switch (argv[2][1])
+				{
+				case 'l':
 					return ARG_OPTION_L;
 
-					case 'p':
+				case 'p':
 					return ARG_OPTION_P;
 
-					case 's':
+				case 's':
 					return ARG_OPTION_S;
 				}
-			} else if (argv[2][1] == 'o') {
+			}
+			else if (argv[2][1] == 'o')
+			{
 				return ARG_OPTION_O;
 			}
 		}
-	} 
-	
+	}
+
 	std::cerr << "Usage:\nEach of the following options halts the compilation process at the corresponding stage and prints the intermediate output:\n\n";
 	std::cerr << "\t`./bin/base <file_name> -l`, to tokenize the input and print the token stream to stdout\n";
 	std::cerr << "\t`./bin/base <file_name> -p`, to parse the input and print the abstract syntax tree (AST) to stdout\n";
@@ -58,91 +65,105 @@ int parse_arguments(int argc, char *argv[]) {
 	return ARG_FAIL;
 }
 
-bool cycle_check(std::unordered_map<std::string, std::string> m) {
-	for(auto i: m) {
+bool cycle_check(std::unordered_map<std::string, std::string> m)
+{
+	for (auto i : m)
+	{
 		std::string ptr = i.first;
-		while(m.find(ptr) != m.end()) {
+		while (m.find(ptr) != m.end())
+		{
 			ptr = m[ptr];
-			if(ptr == i.first) return true;
+			if (ptr == i.first)
+				return true;
 		}
 	}
 	return false;
 }
 
-void preprocess() {
+void preprocess()
+{
 	// Actual Pre
 	int count;
 	int token;
 	std::string contents;
-	
+
 	// Run preprocessor until no more macros can be expanded
-	// Preprocessor works on a "temp" file which is removed at the end
-	do {
+	// Preprocessor works on temp file
+	do
+	{
 		fooin = fopen("temp", "r");
 		count = 0;
 		token = 0;
 		contents = "";
 
 		// Run lexer on program (macro replacing and comment removal)
-		do {
+		do
+		{
 			token = foolex();
 			std::string temp = footext;
 
-			// Every time a macro is added, check for cycles
-			if(token == 5 && cycle_check(map)) {
-				std::cerr<<"Cycle detected in #def statements"<<std::endl;
+			// Check for cycles
+			if (token == 5 && cycle_check(map))
+			{
+				std::cerr << "Cycle detected in #def statements" << std::endl;
 				remove("temp");
 				fclose(fooin);
 				exit(1);
 			}
 
-			// Every time a word is taken in check if it matches macro
-			if(token == 3 && map.find(temp) != map.end()) {
+			// Check if it matches macros "def" and "undef" which are defined in pre.lex
+			if (token == 3 && map.find(temp) != map.end())
+			{
 				count++;
 				temp = map[temp];
 			}
 			contents += temp;
 
-		} while(token != 0);
+		} while (token != 0);
 
 		std::ofstream otemp("temp");
-		otemp<<contents;
+		otemp << contents;
 		otemp.close();
-	} while(count > 0);
+	} while (count > 0);
 
 	fooin = fopen("temp", "r");
 	contents = "";
-	do {
+	do
+	{
 		token = foolex();
 		std::string temp = footext;
-		if(token != 1 && token != 2 && token != 5)
+		if (token != 1 && token != 2 && token != 5)
 			contents += temp;
 
-	} while(token != 0);
+	} while (token != 0);
 
-	// Printing final preprocessed code
-	std::cout<<"PRE"<<std::endl<<contents<<std::endl;
-	
+	// Print final preprocessed code
+	std::cout << "PRE" << std::endl
+			  << contents << std::endl;
+
 	fclose(fooin);
 
 	std::ofstream ofile("temp");
-	ofile<<contents;
+	ofile << contents;
 	ofile.close();
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	int arg_option = parse_arguments(argc, argv);
-	if (arg_option == ARG_FAIL) {
+	if (arg_option == ARG_FAIL)
+	{
 		exit(1);
 	}
 
-	// Copying main file to temp for preprocessing
+	// Copy original file to temp for preprocessing
 	std::string file_name(argv[1]);
 
 	std::ifstream itemp(file_name);
 	std::ofstream otemp("temp");
 	std::string line;
-	while (getline(itemp, line)) {
+	while (getline(itemp, line))
+	{
 		otemp << line << std::endl;
 	}
 	itemp.close();
@@ -154,12 +175,15 @@ int main(int argc, char *argv[]) {
 	yyin = fopen("temp", "r");
 
 	// For debugging, prints tokens
-	if (arg_option == ARG_OPTION_L) {
+	if (arg_option == ARG_OPTION_L)
+	{
 		extern std::string token_to_string(int token, const char *lexeme);
 
-		while (true) {
+		while (true)
+		{
 			int token = yylex();
-			if (token == 0) {
+			if (token == 0)
+			{
 				break;
 			}
 
@@ -169,31 +193,38 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
-    final_values = nullptr;
+	final_values = nullptr;
 
-	// Actual lex and parse
+	// Lex and parse
 	yyparse();
 
 	fclose(yyin);
 	remove("temp");
 
-	if(final_values) {
-		if (arg_option == ARG_OPTION_P) {
+	if (final_values)
+	{
+		if (arg_option == ARG_OPTION_P)
+		{
 			std::cout << final_values->to_string() << std::endl;
 			return 0;
 		}
-		
-        llvm::LLVMContext context;
+
+		llvm::LLVMContext context;
 		LLVMCompiler compiler(&context, "base");
 		compiler.compile(final_values);
-        if (arg_option == ARG_OPTION_S) {
+		if (arg_option == ARG_OPTION_S)
+		{
 			compiler.dump();
-        } else {
-            compiler.write(std::string(argv[3]));
 		}
-	} else {
-	 	std::cerr << "empty program";
+		else
+		{
+			compiler.write(std::string(argv[3]));
+		}
+	}
+	else
+	{
+		std::cerr << "Empty program";
 	}
 
-    return 0;
+	return 0;
 }

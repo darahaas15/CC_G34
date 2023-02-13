@@ -1,10 +1,32 @@
-// Hello
+// Single line comment
 
 /* Multi line comment */
 
+#def TEN 10
+    // Prints 10
+    dbg TEN;
 
-let abc = 123 * 20 + 20 + (22 / 2) - 3;
-dbg abc + abc;
+/* #def STATEMENTS let a = 5; \ let x = a * 16; \
+    let b = 10; 
+    STATEMENTS;
+    dbg a + b * x; */
 
-#def ab 20
-dbg ab + ab;
+#def NOBODY
+    // Prints 1
+    dbg NOBODY;
+
+#def ABC 4
+#def DEF ABC + 5
+#def GHI ABC * DEF
+    // Prints 4 * 4 + 5 = 21
+    dbg GHI; 
+
+#def ABC 1
+    dbg ABC;
+#def ABC 15
+    dbg ABC;
+
+#def ABC 2
+// #undef ABC
+    // Throws an error
+    dbg ABC;
