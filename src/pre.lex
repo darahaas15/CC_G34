@@ -7,6 +7,10 @@
 %x DEFINE
 %x DEFINE_ALT
 %x UNDEF
+%x IFDEF
+%x ELIF
+%x ELSE
+%x ENDIF
 %{
 #include <string>
 #include <unordered_map>
@@ -14,6 +18,8 @@ using namespace std;
 
 string key;
 unordered_map<string, string> map;
+bool skip_section = false;
+bool elif_executed = false;
 %}
 %%
 
@@ -29,6 +35,19 @@ unordered_map<string, string> map;
 <UNDEF>[a-zA-Z]+ {map.erase(yytext); return 2;}
 <UNDEF>[ \n]+ {BEGIN(INITIAL); return 2;}
 
+"#ifdef " {BEGIN(IFDEF); return 6;}
+<IFDEF>[a-zA-Z]+ {skip_section = (map[yytext] != "1"); return 6;}
+<IFDEF>[ \n]+ {BEGIN(INITIAL); return 6;}
+
+"#elif " {BEGIN(ELIF); return 7;}
+<ELIF>[a-zA-Z]+ {elif_executed = skip_section || elif_executed || (map[yytext] == "1"); skip_section = !elif_executed; return 7;}
+<ELIF>[ \n]+ {BEGIN(INITIAL); return 7;}
+
+"#else" {BEGIN(ELSE); return 8;}
+<ELSE>[ \n]+ {skip_section = !elif_executed && skip_section; BEGIN(INITIAL); return 8;}
+
+"#endif" {BEGIN(ENDIF); return 9;}
+<ENDIF>[ \n]+ {skip_section = false; elif_executed = false; BEGIN(INITIAL); return 9;}
 
 "/*"         BEGIN(COMMENT);
 <COMMENT>[^*]*        /* eat anything that's not a '*' */
@@ -39,6 +58,6 @@ unordered_map<string, string> map;
 <COMMENT_ALT>. /* om nom */
 <COMMENT_ALT>[ \n]+ {BEGIN(INITIAL);}
 
-[a-zA-Z]+ {return 3;}
-. {return 4;}
+[a-zA-Z]+ {if (!skip_section) return 3;}
+. {if (!skip_section) return 4;}
 %%
