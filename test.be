@@ -1,10 +1,11 @@
-#def test 10
-let x = 5;
-let y = 10;
+#def debug 10
+#def test2 20
+let x = 5; let y = 6;
 
-#ifdef test
+#ifdef test 
     dbg x;
-#elif
+#elif test2
     dbg y;
 #endif
+
 
