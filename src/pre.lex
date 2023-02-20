@@ -8,8 +8,7 @@
 %x DEFINE_ALT
 %x UNDEF
 %x IFDEF
-%x ELIF
-%x ELSE
+%x IFDEF_ALT
 %x ENDIF
 %{
 #include <string>
@@ -18,8 +17,6 @@ using namespace std;
 
 string key;
 unordered_map<string, string> map;
-bool skip_section = false;
-bool elif_executed = false;
 %}
 %%
 
@@ -35,29 +32,24 @@ bool elif_executed = false;
 <UNDEF>[a-zA-Z]+ {map.erase(yytext); return 2;}
 <UNDEF>[ \n]+ {BEGIN(INITIAL); return 2;}
 
-"#ifdef " {BEGIN(IFDEF); return 6;}
-<IFDEF>[a-zA-Z]+ {skip_section = (map[yytext] != "1"); return 6;}
-<IFDEF>[ \n]+ {BEGIN(INITIAL); return 6;}
+"#ifdef " {BEGIN(IFDEF); return 1;}
+<IFDEF>[a-zA-Z]+ {key=yytext; if(map.find(key)!=map.end()) BEGIN(IFDEF_ALT); return 1;}
+<IFDEF>[^#a-zA-Z]+
+<IFDEF>[#a-zA-Z]+ {key = yytext; if(key=="endif") BEGIN(INITIAL); else BEGIN(IFDEF); return 1;}
+<IFDEF_ALT>"\n" {BEGIN(INITIAL); return 1;}
 
-"#elif " {BEGIN(ELIF); return 7;}
-<ELIF>[a-zA-Z]+ {elif_executed = skip_section || elif_executed || (map[yytext] == "1"); skip_section = !elif_executed; return 7;}
-<ELIF>[ \n]+ {BEGIN(INITIAL); return 7;}
-
-"#else" {BEGIN(ELSE); return 8;}
-<ELSE>[ \n]+ {skip_section = !elif_executed && skip_section; BEGIN(INITIAL); return 8;}
-
-"#endif" {BEGIN(ENDIF); return 9;}
-<ENDIF>[ \n]+ {skip_section = false; elif_executed = false; BEGIN(INITIAL); return 9;}
+"#endif" {BEGIN(ENDIF); return 1;}
+<ENDIF>[\n]+ {BEGIN(INITIAL); return 1;}
 
 "/*"         BEGIN(COMMENT);
-<COMMENT>[^*]*        /* eat anything that's not a '*' */
-<COMMENT>"*"+[^*/]*   /* eat up '*'s not followed by '/'s */
+<COMMENT>[^*]*        
+<COMMENT>"*"+[^*/]*   
 <COMMENT>"*"+"/"        {BEGIN(INITIAL);}
 
 "//"    BEGIN(COMMENT_ALT);
-<COMMENT_ALT>. /* om nom */
+<COMMENT_ALT>. 
 <COMMENT_ALT>[ \n]+ {BEGIN(INITIAL);}
 
-[a-zA-Z]+ {if (!skip_section) return 3;}
-. {if (!skip_section) return 4;}
+[a-zA-Z]+ {return 3;}
+. {return 4;}
 %%

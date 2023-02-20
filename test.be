@@ -1,5 +1,7 @@
-#def test 10 
+#def DEBUG2 10
+let x = 5;
 
-#ifdef test
-    dbg test;
+#ifdef DEBUG
+    dbg x;
 #endif
+
