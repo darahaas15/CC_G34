@@ -1,7 +1,10 @@
-#def DEBUG2 10
+#def test 10
 let x = 5;
+let y = 10;
 
-#ifdef DEBUG
+#ifdef test
     dbg x;
+#elif
+    dbg y;
 #endif
 

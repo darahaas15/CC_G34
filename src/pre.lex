@@ -1,4 +1,3 @@
-/* just like Unix wc */
 %option noyywrap
 %option prefix="foo"
 
@@ -9,6 +8,8 @@
 %x UNDEF
 %x IFDEF
 %x IFDEF_ALT
+%x ELIF
+%x ELSE
 %x ENDIF
 %{
 #include <string>
@@ -37,6 +38,15 @@ unordered_map<string, string> map;
 <IFDEF>[^#a-zA-Z]+
 <IFDEF>[#a-zA-Z]+ {key = yytext; if(key=="endif") BEGIN(INITIAL); else BEGIN(IFDEF); return 1;}
 <IFDEF_ALT>"\n" {BEGIN(INITIAL); return 1;}
+
+"#elif " {BEGIN(ELIF); return 1;}
+<ELIF>[a-zA-Z]+ {key=yytext; if(map.find(key)!=map.end() && map[key] == "1") BEGIN(IFDEF_ALT); return 1;}
+<ELIF>[^#a-zA-Z]+
+<ELIF>[#a-zA-Z]+ {key = yytext; if(key=="endif") BEGIN(INITIAL); else if (key == "else") BEGIN(ELSE); return 1; }
+<IFDEF_ALT>"\n" {BEGIN(INITIAL); return 1;}
+
+"#else" {BEGIN(ELSE); return 1;}
+<ELSE>[\n]+ {BEGIN(INITIAL); return 1;}
 
 "#endif" {BEGIN(ENDIF); return 1;}
 <ENDIF>[\n]+ {BEGIN(INITIAL); return 1;}
