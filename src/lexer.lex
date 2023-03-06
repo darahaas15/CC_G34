@@ -17,14 +17,14 @@ extern int yyerror(std::string msg);
 "("       { return TLPAREN; }
 ")"       { return TRPAREN; }
 "="       { return TEQUAL; }
+"?"       {return TQUESTION; }
+":"       {return TCOL;}
 "dbg"     { return TDBG; }
 "let"     { return TLET; }
 [0-9]+    { yylval.lexeme = std::string(yytext); return TINT_LIT; }
 [a-zA-Z]+ { yylval.lexeme = std::string(yytext); return TIDENT; }
 [ \t\n]   { /* skip */ }
 .         { yyerror("unknown char"); }
-"?"       {return TQUESTION; }
-":"       {return TCOL;}
 
 %%
 

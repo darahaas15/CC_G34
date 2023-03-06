@@ -67,6 +67,15 @@ Stmt : TLET TIDENT TEQUAL Expr
      { 
         $$ = new NodeDebug($2);
      }
+     | TIDENT TEQUAL Expr
+     {
+        if(symbol_table.contains($1)) {
+            $$ = new NodeAssignment($1, $3);
+        } 
+        else {
+            yyerror("tried to assign to undeclared variable.\n");
+        }
+     }
      ;
 
 Expr : TINT_LIT               
@@ -87,6 +96,9 @@ Expr : TINT_LIT
      | Expr TSLASH Expr
      { $$ = new NodeBinOp(NodeBinOp::DIV, $1, $3); }
      | TLPAREN Expr TRPAREN { $$ = $2; }
+     | Expr TQUESTION Expr TCOL Expr
+     { $$ = new NodeTernary($1, $3, $5); }
+     
      ;
 
 %%
@@ -95,3 +107,5 @@ int yyerror(std::string msg) {
     std::cerr << "Error! " << msg << std::endl;
     exit(1);
 }
+
+
