@@ -5,9 +5,9 @@
 #include <string>
 #include "ast.hh"
 
-
 // Basic symbol table, just keeping track of prior existence and nothing else
-struct SymbolTable {
+struct SymbolTable
+{
     std::set<std::string> table;
 
     bool contains(std::string key);
