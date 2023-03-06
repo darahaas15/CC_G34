@@ -112,7 +112,7 @@ NodeTernary::NodeTernary(Node *cond, Node *iftrue, Node *iffalse)
 
 std::string NodeTernary::to_string()
 {
-    return "(if " + condition->to_string() + " " + true_expr->to_string() + " " + false_expr->to_string() + ")";
+    return "(?: " + condition->to_string() + " " + true_expr->to_string() + " " + false_expr->to_string() + ")";
 }
 
 NodeAssignment::NodeAssignment(std::string ident, Node *expr)
@@ -124,5 +124,6 @@ NodeAssignment::NodeAssignment(std::string ident, Node *expr)
 
 std::string NodeAssignment::to_string()
 {
-    return "(set " + identifier + " " + expression->to_string() + ")";
+    // must return the string “ (assign a b) “.
+    return "(assign " + identifier + " " + expression->to_string() + ")";
 }
