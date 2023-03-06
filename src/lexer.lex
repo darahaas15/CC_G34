@@ -23,6 +23,8 @@ extern int yyerror(std::string msg);
 [a-zA-Z]+ { yylval.lexeme = std::string(yytext); return TIDENT; }
 [ \t\n]   { /* skip */ }
 .         { yyerror("unknown char"); }
+"?"       {return TQUESTION; }
+":"       {return TCOL;}
 
 %%
 
