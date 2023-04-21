@@ -25,10 +25,13 @@ int yyerror(std::string msg);
 
 }
 
+
+
 %token TPLUS TDASH TSTAR TSLASH
 %token <lexeme> TINT_LIT TIDENT
 %token INT TLET TDBG
 %token TSCOL TLPAREN TRPAREN TEQUAL
+%token TCOLON TSHORT TINT TLONG
 
 %type <node> Expr Stmt
 %type <stmts> Program StmtList
@@ -81,7 +84,7 @@ Expr : TINT_LIT
      | Expr TDASH Expr
      { $$ = new NodeBinOp(NodeBinOp::MINUS, $1, $3); }
      | Expr TSTAR Expr
-     { $$ = new NodeBinOp(NodeBinOp::MULT, $1, $3); }
+     { $$ = new NodeBinOp(NodeBinOp::MULT, $1, $3); } 
      | Expr TSLASH Expr
      { $$ = new NodeBinOp(NodeBinOp::DIV, $1, $3); }
      | TLPAREN Expr TRPAREN { $$ = $2; }
