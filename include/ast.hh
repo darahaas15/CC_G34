@@ -110,4 +110,23 @@ struct NodeIdent : public Node
     llvm::Value *llvm_codegen(LLVMCompiler *compiler);
 };
 
+struct NodeShort : public Node
+{
+    short value;
+
+    NodeShort(short val);
+    std::string to_string();
+    llvm::Value *llvm_codegen(LLVMCompiler *compiler);
+};
+
+struct NodeLong : public Node
+{
+    long value;
+
+    NodeLong(long val);
+    std::string to_string();
+    llvm::Value *llvm_codegen(LLVMCompiler *compiler);
+};
+
+
 #endif
