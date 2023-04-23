@@ -69,7 +69,7 @@ Stmt : TLET TIDENT TCOLON
         } else {
             symbol_table.insert($2, 0);
 
-            $$ = new NodeDecl($2, $7);
+            $$ = new NodeDecl($2, $7, 0);
             maxType = 3;
         }
      }
@@ -85,7 +85,7 @@ Stmt : TLET TIDENT TCOLON
         } else {
             symbol_table.insert($2, 1);
  
-            $$ = new NodeDecl($2, $7);
+            $$ = new NodeDecl($2, $7, 1);
             maxType = 3;
  
         }
@@ -106,7 +106,7 @@ Stmt : TLET TIDENT TCOLON
         } else {
             symbol_table.insert($2, 2);
  
-            $$ = new NodeDecl($2, $7);
+            $$ = new NodeDecl($2, $7, 2);
             maxType = 3;
  
         }

@@ -81,8 +81,9 @@ struct NodeDecl : public Node
 {
     std::string identifier;
     Node *expression;
+    int datatype;
 
-    NodeDecl(std::string id, Node *expr);
+    NodeDecl(std::string id, Node *expr, int datatype);
     std::string to_string();
     llvm::Value *llvm_codegen(LLVMCompiler *compiler);
 };

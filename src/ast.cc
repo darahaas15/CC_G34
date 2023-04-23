@@ -10,7 +10,51 @@ NodeBinOp::NodeBinOp(NodeBinOp::Op ope, Node *leftptr, Node *rightptr) {
     right = rightptr;
 }
 
+bool checkIfNum(std::string str){
+    int i = 0;
+ 
+    // Handle negative numbers
+    if (str[0] == '-') {
+        i = 1;
+    }
+ 
+    // Check each character of the string
+    while (str[i] != '\0') {
+        if (!isdigit(str[i])) {
+            return false;
+        }
+        i++;
+    }
+ 
+    return true;
+}
+
 std::string NodeBinOp::to_string() {
+ 
+    std::string leftStr = left->to_string();
+    std::string rightStr = right->to_string();
+ 
+    int leftVal;
+    int rightVal;
+ 
+    if(checkIfNum(rightStr) && checkIfNum(leftStr)){
+        leftVal = std::stoi(leftStr);
+        rightVal = std::stoi(rightStr);
+ 
+        if(op == PLUS){
+            return std::to_string(leftVal + rightVal);
+        }
+        else if(op == MINUS){
+            return std::to_string(leftVal - rightVal);
+        }
+        else if(op == MULT){
+            return std::to_string(leftVal * rightVal);
+        }
+        else if(op == DIV){
+            return std::to_string(leftVal / rightVal);
+        }
+    }
+ 
     std::string out = "(";
     switch(op) {
         case PLUS: out += '+'; break;
@@ -18,9 +62,9 @@ std::string NodeBinOp::to_string() {
         case MULT: out += '*'; break;
         case DIV: out += '/'; break;
     }
-
+ 
     out += ' ' + left->to_string() + ' ' + right->to_string() + ')';
-
+ 
     return out;
 }
 
@@ -54,14 +98,32 @@ std::string NodeStmts::to_string() {
     return out;
 }
 
-NodeDecl::NodeDecl(std::string id, Node *expr) {
+NodeDecl::NodeDecl(std::string id, Node *expr, int data) {
     type = ASSN;
     identifier = id;
     expression = expr;
+    datatype = data;
 }
 
 std::string NodeDecl::to_string() {
-    return "(let " + identifier + " " + expression->to_string() + ")";
+    std::string strType;
+ 
+    if(datatype == 0){
+        strType = "short";
+    }
+    else if(datatype == 1){
+        strType = "int";
+    }
+    else if(datatype == 2){
+        strType = "long";
+    }
+ 
+    std::string out = "";
+    identifier = "(" + identifier;
+    strType = strType + ")";
+    out += "(let " + identifier + " " + strType + " " + expression->to_string() + ")";
+    
+    return out;
 }
 
 NodeDebug::NodeDebug(Node *expr) {
