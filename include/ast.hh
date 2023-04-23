@@ -21,7 +21,8 @@ struct Node
         DBG,
         IDENT,
         LONG_LIT,
-        SHORT_LIT
+        SHORT_LIT,
+        IF
     } type;
 
     virtual std::string to_string() = 0;
@@ -110,23 +111,18 @@ struct NodeIdent : public Node
     llvm::Value *llvm_codegen(LLVMCompiler *compiler);
 };
 
-struct NodeShort : public Node
+/**
+    Node for If-Else
+*/
+struct NodeIfElse : public Node
 {
-    short value;
+    Node *condition;
+    Node *if_cond;
+    Node *else_cond;
 
-    NodeShort(short val);
+    NodeIfElse(Node *condition, Node *if_cond, Node *else_cond);
     std::string to_string();
     llvm::Value *llvm_codegen(LLVMCompiler *compiler);
 };
-
-struct NodeLong : public Node
-{
-    long value;
-
-    NodeLong(long val);
-    std::string to_string();
-    llvm::Value *llvm_codegen(LLVMCompiler *compiler);
-};
-
 
 #endif

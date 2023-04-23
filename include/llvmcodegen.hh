@@ -11,6 +11,7 @@
 
 using namespace llvm;
 
+
 /**
     Compiler struct to store state of the LLVM IRBuilder.
     The `compile` method recursively calls the llvmcodegen method for a given 
@@ -20,7 +21,8 @@ struct LLVMCompiler {
     LLVMContext *context;
     IRBuilder<> builder;
     Module module;
-    std::unordered_map<std::string, AllocaInst*> locals;
+    std::unordered_map<std::string, AllocaInst*> localscope[5001];
+    int scope = 0;
     
     LLVMCompiler(LLVMContext *context, std::string file_name) : 
         context(context), builder(*context), module(file_name, *context) {}

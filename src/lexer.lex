@@ -22,7 +22,11 @@ extern int yyerror(std::string msg);
 "short"   { return TSHORT; }
 "int"     { return TINT; }
 "long"    { return TLONG; }
+"if"      { return TIF; }
+"else"    { return TELSE; }
 ":"       { return TCOLON; }
+"{"       { return TLBRACE; }
+"}"       { return TRBRACE; }
 [0-9]+    { yylval.lexeme = std::string(yytext); return TINT_LIT; }
 [a-zA-Z]+ { yylval.lexeme = std::string(yytext); return TIDENT; }
 [ \t\n]   { /* skip */ }
