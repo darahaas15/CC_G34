@@ -22,21 +22,20 @@ ins `docs/llvm.md`
 
 char *constants[13] = {"ifcont", "else", "then", "merge", "ifcond", "printi", "main", "entry", "addtmp", "minustmp", "multtmp", "divtmp", "iftmp"};
 
-void LLVMCompiler::compile(Node *root) {
+void LLVMCompiler::compile(Node *root)
+{
     /* Adding reference to print_i in the runtime library */
     // void printi();
     FunctionType *printi_func_type = FunctionType::get(
         builder.getVoidTy(),
         {builder.getInt64Ty()},
-        false
-    );
+        false);
     Function::Create(
         printi_func_type,
         GlobalValue::ExternalLinkage,
         "printi",
-        &module
-    );
-    /* we can get this later 
+        &module);
+    /* we can get this later
         module.getFunction("printi");
     */
 
@@ -49,15 +48,13 @@ void LLVMCompiler::compile(Node *root) {
         main_func_type,
         GlobalValue::ExternalLinkage,
         "main",
-        &module
-    );
+        &module);
 
     // create main function block
     BasicBlock *main_func_entry_bb = BasicBlock::Create(
         *context,
         "entry",
-        main_func
-    );
+        main_func);
 
     // move the builder to the start of the main function block
     builder.SetInsertPoint(main_func_entry_bb);
@@ -68,11 +65,13 @@ void LLVMCompiler::compile(Node *root) {
     builder.CreateRet(builder.getInt64(0));
 }
 
-void LLVMCompiler::dump() {
+void LLVMCompiler::dump()
+{
     outs() << module;
 }
 
-void LLVMCompiler::write(std::string file_name) {
+void LLVMCompiler::write(std::string file_name)
+{
     std::error_code EC;
     raw_fd_ostream fout(file_name, EC, sys::fs::OF_None);
     WriteBitcodeToFile(module, fout);
@@ -84,18 +83,20 @@ void LLVMCompiler::write(std::string file_name) {
 //  │ AST -> LLVM Codegen │  //
 // └―――――――――――――――――――――┘   //
 
-
 // codegen for statements
-Value *NodeStmts::llvm_codegen(LLVMCompiler *compiler) {
+Value *NodeStmts::llvm_codegen(LLVMCompiler *compiler)
+{
     Value *last = nullptr;
-    for(auto node : list) {
+    for (auto node : list)
+    {
         last = node->llvm_codegen(compiler);
     }
 
     return last;
 }
 
-Value *NodeDebug::llvm_codegen(LLVMCompiler *compiler) {
+Value *NodeDebug::llvm_codegen(LLVMCompiler *compiler)
+{
     Value *expr = expression->llvm_codegen(compiler);
 
     Function *printi_func = compiler->module.getFunction("printi");
@@ -104,35 +105,37 @@ Value *NodeDebug::llvm_codegen(LLVMCompiler *compiler) {
     return expr;
 }
 
-Value *NodeInt::llvm_codegen(LLVMCompiler *compiler) {
+Value *NodeInt::llvm_codegen(LLVMCompiler *compiler)
+{
     return compiler->builder.getInt64(value);
 }
 
-Value *NodeBinOp::llvm_codegen(LLVMCompiler *compiler) {
+Value *NodeBinOp::llvm_codegen(LLVMCompiler *compiler)
+{
     Value *left_expr = left->llvm_codegen(compiler);
     Value *right_expr = right->llvm_codegen(compiler);
 
-    switch(op) {
-        case PLUS:
+    switch (op)
+    {
+    case PLUS:
         return compiler->builder.CreateAdd(left_expr, right_expr, "addtmp");
-        case MINUS:
+    case MINUS:
         return compiler->builder.CreateSub(left_expr, right_expr, "minustmp");
-        case MULT:
+    case MULT:
         return compiler->builder.CreateMul(left_expr, right_expr, "multtmp");
-        case DIV:
+    case DIV:
         return compiler->builder.CreateSDiv(left_expr, right_expr, "divtmp");
     }
 }
 
-
-Value *NodeDecl::llvm_codegen(LLVMCompiler *compiler) {
+Value *NodeDecl::llvm_codegen(LLVMCompiler *compiler)
+{
     Value *expr = expression->llvm_codegen(compiler);
 
     int sc = compiler->scope;
     IRBuilder<> temp_builder(
         &MAIN_FUNC->getEntryBlock(),
-        MAIN_FUNC->getEntryBlock().begin()
-    );
+        MAIN_FUNC->getEntryBlock().begin());
 
     AllocaInst *alloc = temp_builder.CreateAlloca(compiler->builder.getInt64Ty(), 0, identifier);
 
@@ -141,23 +144,33 @@ Value *NodeDecl::llvm_codegen(LLVMCompiler *compiler) {
     return compiler->builder.CreateStore(expr, alloc);
 }
 
-Value *NodeIdent::llvm_codegen(LLVMCompiler *compiler) {
+Value *NodeIdent::llvm_codegen(LLVMCompiler *compiler)
+{
     int sc = compiler->scope;
 
-    while(sc > 0) {
-        if(compiler->localscope[sc][identifier] != nullptr) {
+    while (sc > 0)
+    {
+        if (compiler->localscope[sc][identifier] != nullptr)
+        {
             break;
         }
         sc--;
     }
-    
+
     AllocaInst *alloc = compiler->localscope[sc][identifier];
 
     // if your LLVM_MAJOR_VERSION >= 14
     return compiler->builder.CreateLoad(compiler->builder.getInt64Ty(), alloc, identifier);
 }
 
-Value *NodeIfElse::llvm_codegen(LLVMCompiler *compiler) {
+Value *NodeIfElse::llvm_codegen(LLVMCompiler *compiler)
+{
+
+    if (!if_cond && !else_cond)
+    {
+        return nullptr;
+    }
+
     compiler->scope++;
     Value *cond = condition->llvm_codegen(compiler);
 
@@ -166,32 +179,68 @@ Value *NodeIfElse::llvm_codegen(LLVMCompiler *compiler) {
 
     Function *if_function = compiler->builder.GetInsertBlock()->getParent();
 
-    BasicBlock *thenBlock = BasicBlock::Create(*compiler->context, constants[2], if_function);
-    BasicBlock *elseBlock = BasicBlock::Create(*compiler->context, constants[1]);
+    BasicBlock *thenBlock, *elseBlock;
+
+    if (if_cond)
+    {
+        thenBlock = BasicBlock::Create(*compiler->context, constants[2], if_function);
+    }
+    else
+    {
+        thenBlock = BasicBlock::Create(*compiler->context, "empty_then", if_function);
+    }
+
+    if (else_cond)
+    {
+        elseBlock = BasicBlock::Create(*compiler->context, constants[1]);
+    }
+    else
+    {
+        elseBlock = BasicBlock::Create(*compiler->context, "empty_else");
+    }
+
     BasicBlock *mergeBlock = BasicBlock::Create(*compiler->context, constants[0]);
 
+    // Branch to the then or else block depending on the condition
     compiler->builder.CreateCondBr(cond, thenBlock, elseBlock);
 
     // Then Block
     compiler->builder.SetInsertPoint(thenBlock);
-    Value *ifConditionValue = if_cond->llvm_codegen(compiler);
-    StoreInst *then = dyn_cast<StoreInst>(ifConditionValue);
-    if(then)
-        ifConditionValue = then->getValueOperand();
-    
+
+    Value *ifConditionValue = if_cond ? if_cond->llvm_codegen(compiler) : nullptr;
+
+    if (ifConditionValue)
+    {
+        StoreInst *then = dyn_cast<StoreInst>(ifConditionValue);
+        if (then)
+            ifConditionValue = then->getValueOperand();
+    }
     compiler->builder.CreateBr(mergeBlock);
     thenBlock = compiler->builder.GetInsertBlock();
 
     // Else Block
-    if_function->getBasicBlockList().push_back(elseBlock);
-    compiler->builder.SetInsertPoint(elseBlock);
-    Value *elseConditionValue = else_cond->llvm_codegen(compiler);
-    StoreInst *elseStoreValue = dyn_cast<StoreInst>(elseConditionValue);
-    if(elseStoreValue)
-        elseConditionValue = elseStoreValue->getValueOperand();
-    
-    compiler->builder.CreateBr(mergeBlock);
-    elseBlock = compiler->builder.GetInsertBlock();
+    Value *elseConditionValue = else_cond ? else_cond->llvm_codegen(compiler) : nullptr;
+
+    if (else_cond)
+    {
+        if_function->getBasicBlockList().push_back(elseBlock);
+        compiler->builder.SetInsertPoint(elseBlock);
+        if (elseConditionValue)
+        {
+            StoreInst *elseStoreValue = dyn_cast<StoreInst>(elseConditionValue);
+            if (elseStoreValue)
+                elseConditionValue = elseStoreValue->getValueOperand();
+        }
+        compiler->builder.CreateBr(mergeBlock);
+        elseBlock = compiler->builder.GetInsertBlock();
+    }
+    else
+    {
+        if_function->getBasicBlockList().push_back(elseBlock);
+        compiler->builder.SetInsertPoint(elseBlock);
+
+        compiler->builder.CreateBr(mergeBlock);
+    }
 
     // Merge Block
     if_function->getBasicBlockList().push_back(mergeBlock);
@@ -199,10 +248,26 @@ Value *NodeIfElse::llvm_codegen(LLVMCompiler *compiler) {
 
     // Phi Node
     PHINode *phiNode = compiler->builder.CreatePHI(compiler->builder.getInt64Ty(), 2, "iftmp");
-    phiNode->addIncoming(ifConditionValue, thenBlock);
-    phiNode->addIncoming(elseConditionValue, elseBlock);
 
-    compiler->scope--;
+    if (ifConditionValue)
+    {
+        phiNode->addIncoming(ifConditionValue, thenBlock);
+    }
+    else
+    {
+        Constant *nullValue = ConstantInt::get(compiler->builder.getInt64Ty(), 0);
+        phiNode->addIncoming(nullValue, thenBlock);
+    }
+
+    if (elseConditionValue)
+    {
+        phiNode->addIncoming(elseConditionValue, elseBlock);
+    }
+    else
+    {
+        Constant *nullValue = ConstantInt::get(compiler->builder.getInt64Ty(), 0);
+        phiNode->addIncoming(nullValue, elseBlock);
+    }
 
     return phiNode;
 }

@@ -1,84 +1,85 @@
 %define api.value.type { ParserValue }
-
+ 
 %code requires {
 #include <iostream>
 #include <vector>
 #include <string>
-
+ 
 #include "parser_util.hh"
 #include "symbol.hh"
-
+ 
 }
-
+ 
 %code {
-
+ 
 #include <cstdlib>
-
+ 
 extern int yylex();
 extern int yyparse();
-
+ 
 extern NodeStmts* final_values;
-
+ 
 SymbolStack symbol_table;
-
+ 
 int yyerror(std::string msg);
 int yyerrortype(std::string msg, int type);
-
+ 
 int maxType = -1;
 bool exists = false;
 }
-
-
+ 
+ 
 %token TPLUS TDASH TSTAR TSLASH
 %token <lexeme> TINT_LIT TIDENT
-%token INT TLET TDBG
+%token TLET TDBG
 %token TSCOL TLPAREN TRPAREN TEQUAL TLBRACE TRBRACE
 %token TCOLON TSHORT TINT TLONG
 %token TIF TELSE
-
-%type <node> Expr Stmt
-%type <stmts> Program StmtList
-
+ 
+%type <node> Expr Stmt ifStatement
+%type <stmts> Program StmtList 
+ 
 %left TPLUS TDASH
 %left TSTAR TSLASH
-
+ 
 %%
-
+ 
 Program :                
         { final_values = nullptr; }
         | StmtList 
         { final_values = $1; }
 	    ;
-
+ 
 StmtList : Stmt                
          { $$ = new NodeStmts(); $$->push_back($1); }
 	     | StmtList Stmt 
          { $$->push_back($2); }
+         | %empty
 	     ;
-
+ 
 Stmt : TLET TIDENT TCOLON 
        {
         maxType = 0;
-
+ 
        } 
        TSHORT TEQUAL Expr TSCOL
-     {
+       {
         if(symbol_table.contains($2, 0)) {
             // tried to redeclare variable, so error
             yyerror("tried to redeclare variable.\n");
-        } else {
+            } else {
             symbol_table.insert($2, 0);
-
+ 
             $$ = new NodeDecl($2, $7, 0);
             maxType = 3;
-        }
-     }
-     |TLET TIDENT TCOLON 
-      {
+            }
+       }
+     | TLET TIDENT TCOLON 
+       {
         maxType = 1;
-      }
+       }
       TINT TEQUAL Expr TSCOL
-     {
+      {
         if(symbol_table.contains($2, 1)) {
             // tried to redeclare variable, so error
             yyerror("tried to redeclare variable.\n");
@@ -89,10 +90,6 @@ Stmt : TLET TIDENT TCOLON
             maxType = 3;
  
         }
-     }
-     | TLET TIDENT TCOLON 
-     {
-        maxType = 2;
      }
      | TLET TIDENT TCOLON 
      {
@@ -115,25 +112,52 @@ Stmt : TLET TIDENT TCOLON
      { 
         $$ = new NodeDebug($2);
      }
-     | TIF Expr TLBRACE
-     {
-        symbol_table.enterScope();
-     }
-     StmtList TRBRACE
-     {
-        symbol_table.exitScope();
-     }
-     TELSE TLBRACE
-     {
-        symbol_table.enterScope();
-     }
-     StmtList TRBRACE
-     {
-         $$ = new NodeIfElse($2, $5, $11);
-         symbol_table.exitScope();
-     }
+     | ifStatement
      ;
-
+ 
+ifStatement : TIF Expr TLBRACE TRBRACE TELSE TLBRACE{
+                symbol_table.enterScope();
+            }
+            StmtList TRBRACE
+            {
+                $$ = new NodeIfElse($2, nullptr, $8);
+                symbol_table.exitScope();
+            } 
+            | TIF Expr TLBRACE
+            {
+                symbol_table.enterScope();
+            }
+            StmtList TRBRACE 
+            {
+                symbol_table.exitScope();
+            }
+            TELSE TLBRACE 
+            {
+                symbol_table.enterScope();
+            }
+            StmtList TRBRACE 
+            {
+                $$ = new NodeIfElse($2, $5, $11);
+                symbol_table.exitScope();
+            }  
+            | TIF Expr TLBRACE 
+            {
+                symbol_table.enterScope();
+            } 
+            StmtList TRBRACE
+            {
+                symbol_table.exitScope();
+        
+            } 
+            TELSE TLBRACE TRBRACE
+            {
+                $$ = new NodeIfElse($2, $5, nullptr);   
+            }  
+            | TIF Expr TLBRACE TRBRACE TELSE TLBRACE TRBRACE{
+                $$ = new NodeIfElse($2, nullptr, nullptr);
+            }
+            ;
+ 
 Expr : TINT_LIT               
      { $$ = new NodeInt(stoi($1)); }
      | TIDENT 
@@ -176,14 +200,14 @@ Expr : TINT_LIT
      { $$ = new NodeBinOp(NodeBinOp::DIV, $1, $3); }
      | TLPAREN Expr TRPAREN { $$ = $2; }
      ;
-
+ 
 %%
-
+ 
 int yyerror(std::string msg) {
     std::cerr << "Error! " << msg << std::endl;
     exit(1);
 }
-
+ 
 int yyerrortype(std::string msg, int type) {
     if(type == 0){
         std::cerr << "Error! " << msg << "short" << std::endl;
@@ -191,4 +215,5 @@ int yyerrortype(std::string msg, int type) {
     if(type == 1){
         std::cerr << "Error! " << msg << "int" << std::endl;
     }
+    exit(1);
 }
